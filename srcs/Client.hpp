@@ -19,6 +19,7 @@ class Client {
 		bool	get_connected_status(){ return this->_connected; }
 		bool	get_user_status(){ return this->_user_checked; }
 		bool	get_nick_status(){ return this->_nick_checked; }
+		bool	get_oper_status(){ return this->_oper_checked; }
 
 		// Setters //
 
@@ -34,6 +35,7 @@ class Client {
 		void	set_connected_status( bool status ){ this->_connected = status; }
 		void	set_user_status( bool status ){ this->_user_checked = status; }
 		void	set_nick_status( bool status ){ this->_nick_checked = status; }
+		void	set_oper_status( bool status ){ this->_oper_checked = status; }
 
 	private :
 
@@ -49,4 +51,5 @@ class Client {
 		bool	_connected;
 		bool	_user_checked;
 		bool	_nick_checked;
+		bool	_oper_checked;
 };
