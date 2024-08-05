@@ -1,5 +1,6 @@
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 
 #include <vector>
 #include <sys/types.h>
@@ -54,6 +55,7 @@ class Server {
 		bool	check_existing_channel( std::string channel_name );
 		bool	check_existing_client_by_username( std::string username );
 		bool	check_existing_client_by_nickname( std::string nickname );
+		bool	is_digit( const std::string &str){ return str.find_first_not_of("0123456789") == std::string::npos; }
 
 		// Command Functions //
 
@@ -67,8 +69,8 @@ class Server {
 		void	oper_command( std::vector<std::string> command_parsed, Client *client );
 		void	kick_command( std::vector<std::string> command_parsed, Client *client );
 		void	invite_command( std::vector<std::string> command_parsed, Client *client );
+		void	mode_command( std::vector<std::string> command_parsed, Client *client );
 		// void			topic_command(int fd, std::vector<std::string> command_parsed);
-		// void			mode_command(int fd, std::vector<std::string> command_parsed);
 
 		// Clear Functions //
 

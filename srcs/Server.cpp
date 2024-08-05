@@ -342,7 +342,12 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 
 			Channel channel;
 			channel.set_channel_name(command_parsed[1]);
+			channel.set_key_mode(false);
+			channel.set_invite_mode(false);
+			channel.set_topic_mode(false);
+			channel.set_limit_mode(false);
 			channel.add_new_client(*client);
+			channel.add_operator(*client);
 			_channel_register.push_back(channel);
 			std::cout << "Channel [" << channel.get_channel_name() << "] created by Client [" << client->get_client_username() << "]." << std::endl;
 			send_message(client->get_client_fd(), "You created a channel !\n");
@@ -520,6 +525,208 @@ void	Server::invite_command( std::vector<std::string> command_parsed, Client *cl
 	}
 	else
 		send_message(client->get_client_fd(), "Bad parameters... INVITE <nickname> <channel>;\n");
+}
+
+void	Server::mode_command(std::vector<std::string> command_parsed, Client *client) {
+	
+	if (command_parsed.size() >= 3 && command_parsed.size() < 5) {
+		
+		Channel *channel= get_channel(command_parsed[1]);
+		
+		if (!channel)
+			send_message(client->get_client_fd(), "This channel doesn't exist...\n");
+		else if (channel->check_operator_status(client->get_client_fd()) == false)
+			send_message(client->get_client_fd(), "You don't have rights to use MODE command here...\n");
+		else {
+
+			if (command_parsed[2] == "+k") {
+
+				if (command_parsed.size() == 4) {
+
+					channel->set_channel_password(command_parsed[3]);
+					channel->set_key_mode(true);
+					std::cout << "Client [" << client->get_client_username() << "] set a password to Channel [" << channel->get_channel_name() << "]." << std::endl;
+					send_message(client->get_client_fd(), "Password added successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] added a password to Channel [" + channel->get_channel_name() + "] : <" + command_parsed[3] + ">.\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> +k <password>\n");
+			}
+			else if (command_parsed[2] == "-k") {
+
+				if (command_parsed.size() == 3) {
+
+					channel->set_key_mode(false);
+					std::cout << "Client [" << client->get_client_username() << "] removed the password from Channel [" << channel->get_channel_name() << "]." << std::endl;
+					send_message(client->get_client_fd(), "Password removed successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] removed the password from Channel [" + channel->get_channel_name() + "].\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> -k\n");
+			}
+			else if (command_parsed[2] == "+i") {
+				
+				if (command_parsed.size() == 3) {
+
+					channel->set_invite_mode(true);
+					std::cout << "Client [" << client->get_client_username() << "] set Invite-Only to Channel [" << channel->get_channel_name() << "]." << std::endl;
+					send_message(client->get_client_fd(), "Invite-Only mode set successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] set Invite-Only to Channel [" + channel->get_channel_name() + "].\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> +i\n");
+			}
+			else if (command_parsed[2] == "-i") {
+
+				if (command_parsed.size() == 3) {
+
+					channel->set_invite_mode(false);
+					std::cout << "Client [" << client->get_client_username() << "] removed Invite-Only from Channel [" << channel->get_channel_name() << "]." << std::endl;
+					send_message(client->get_client_fd(), "Invite-Only mode removed successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] removed Invite-Only from Channel [" + channel->get_channel_name() + "].\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> -i\n");
+			}
+			else if (command_parsed[2] == "+t") {
+
+				if (command_parsed.size() == 3) {
+
+					channel->set_topic_mode(true);
+					std::cout << "Client [" << client->get_client_username() << "] set Topic rights to Channel [" << channel->get_channel_name() << "]." << std::endl;
+					send_message(client->get_client_fd(), "Topic rights set successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] set Topic rights to Channel [" + channel->get_channel_name() + "].\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> +t\n");
+			}
+			else if (command_parsed[2] == "-t") {
+
+				if (command_parsed.size() == 3) {
+
+					channel->set_topic_mode(false);
+					std::cout << "Client [" << client->get_client_username() << "] removed Topic rights to Channel [" << channel->get_channel_name() << "]." << std::endl;
+					send_message(client->get_client_fd(), "Topic rights removed successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] removed Topic rights to Channel [" + channel->get_channel_name() + "].\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> -t\n");
+			}
+			else if (command_parsed[2] == "+o") {
+
+				if (command_parsed.size() == 4) {
+
+					if (!channel->check_existing_client(get_client_by_username(command_parsed[3])->get_client_fd()))
+						send_message(client->get_client_fd(), "This client doesn't exist...\n");
+					else if (channel->check_operator_status(get_client_by_username(command_parsed[3])->get_client_fd()))
+						send_message(client->get_client_fd(), "This client already got operator rights...\n");
+					else {
+			
+						channel->add_operator(*get_client_by_username(command_parsed[3]));
+						std::cout << "Client [" << client->get_client_username() << "] give operator rights to Client [" << command_parsed[3] << "]." << std::endl;
+						send_message(client->get_client_fd(), "Operator rights successfully given.\n");
+
+						std::string	message;
+
+						message += "Client [" + client->get_client_username() + "] give you operator rights.\n";
+						channel->send_message_to_client(message, client);
+					}
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> +o <user>\n");
+			}
+			else if (command_parsed[2] == "-o") {
+
+				if (command_parsed.size() == 4) {
+
+					if (!channel->check_existing_client(get_client_by_username(command_parsed[3])->get_client_fd()))
+						send_message(client->get_client_fd(), "This client doesn't exist...\n");
+					else if (!channel->check_operator_status(get_client_by_username(command_parsed[3])->get_client_fd()))
+						send_message(client->get_client_fd(), "This client doesn't have operator rights...\n");
+					else {
+		
+						channel->remove_operator_status(*get_client_by_username(command_parsed[3]));
+						std::cout << "Client [" << client->get_client_username() << "] removed operator rights to Client [" << command_parsed[3] << "]." << std::endl;
+						send_message(client->get_client_fd(), "Operator rights successfully removed.\n");
+
+						std::string	message;
+
+						message += "Client [" + client->get_client_username() + "] removed your operator rights.\n";
+						channel->send_message_to_client(message, client);
+					}
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> -o <user>\n");
+			}
+			else if (command_parsed[2] == "+l") {
+
+				if (command_parsed.size() == 4) {
+
+					if (is_digit(command_parsed[3])) {
+
+						if (atoi(command_parsed[3].c_str()) >= _client_register.size())
+							channel->set_user_limit(atoi(command_parsed[3].c_str()));
+						else
+						{send_message(client->get_client_fd(), "Limit too low...\n"); return ;}
+					}
+					else
+						{send_message(client->get_client_fd(), "Invalid limit...\n"); return ;}
+					channel->set_limit_mode(true);
+					std::cout << "Client [" << client->get_client_username() << "] set a limit to Channel [" << channel->get_channel_name() << "] of " << command_parsed[3] << " users." <<std::endl;
+					send_message(client->get_client_fd(), "Limit set successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] set a limit to Channel [" + channel->get_channel_name() + "] of " + command_parsed[3] + " users.\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> +l <limit>\n");
+			}
+			else if (command_parsed[2] == "-l") {
+
+				if (command_parsed.size() == 3) {
+
+					channel->set_limit_mode(false);
+					std::cout << "Client [" << client->get_client_username() << "] removed limit to Channel [" << channel->get_channel_name() << "]." << std::endl;
+					send_message(client->get_client_fd(), "Limit removed successfully.\n");
+
+					std::string	message;
+
+					message += "Client [" + client->get_client_username() + "] removed limit to Channel [" + channel->get_channel_name() + "].\n";
+					channel->send_message_to_client(message, client);
+				}
+				else
+					send_message(client->get_client_fd(), "Bad parameters... MODE <channel> -l\n");
+			}
+			else
+				send_message(client->get_client_fd(), "You tried to change a non existant mode...\n");
+		}
+	}
 }
 
 // CLEAR FUNCTIONS //
