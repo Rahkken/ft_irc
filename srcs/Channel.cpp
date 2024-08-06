@@ -2,33 +2,24 @@
 
 // FUNCTIONS //
 
-bool	Channel::check_existing_client( int fd ) {
+bool	Channel::check_existing_client( Client *client ) {
 
 	for (size_t i = 0; i < _client_register.size(); i++) {
 
-		if (_client_register[i].get_client_fd() == fd)
+		if (_client_register[i].get_client_fd() == client->get_client_fd())
 			return true;
 	}
 	return false;
 }
 
-bool	Channel::check_operator_status( int fd ) {
+bool	Channel::check_operator_status( Client *client ) {
 
 	for (size_t i = 0; i < _operator_register.size(); i++) {
 
-		if (_operator_register[i].get_client_fd() == fd)
+		if (_operator_register[i].get_client_fd() == client->get_client_fd())
 			return true;
 	}
 	return false;
-}
-
-void	Channel::send_message_to_client( std::string message, Client *client ) {
-
-	for (size_t i = 0; i < _client_register.size(); i++) {
-
-		if (_client_register[i].get_client_fd() != client->get_client_fd())
-			send_message(_client_register[i].get_client_fd(), message);
-	}
 }
 
 void	Channel::remove_operator_status( Client client ) {
@@ -37,6 +28,15 @@ void	Channel::remove_operator_status( Client client ) {
 
 		if (client.get_client_fd() == _operator_register[i].get_client_fd())
 			_operator_register.erase(_operator_register.begin()+i);
+	}
+}
+
+void	Channel::send_message_to_client( std::string message, Client *client ) {
+
+	for (size_t i = 0; i < _client_register.size(); i++) {
+
+		if (_client_register[i].get_client_fd() != client->get_client_fd())
+			Client::send_message(_client_register[i].get_client_fd(), message);
 	}
 }
 

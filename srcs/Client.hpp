@@ -1,5 +1,3 @@
-#include <iostream>
-
 class Client {
 
 	public :
@@ -9,17 +7,18 @@ class Client {
 
 		// Getters //
 
-		int		get_client_fd(){ return this->_client_fd; }
-		std::string		get_client_nickname(){ return this->_nickname; }
-		std::string		get_client_username(){ return this->_username; }
-		std::string		get_client_hostname(){ return this->_hostname; }
-		std::string		get_client_servername(){ return this->_servername; }
-		std::string		get_client_realname(){ return this->_realname; }
+		int		get_client_fd() const{ return this->_client_fd; }
 
-		bool	get_connected_status(){ return this->_connected; }
-		bool	get_user_status(){ return this->_user_checked; }
-		bool	get_nick_status(){ return this->_nick_checked; }
-		bool	get_oper_status(){ return this->_oper_checked; }
+		std::string	get_client_nickname() const{ return this->_nickname; }
+		std::string	get_client_username() const{ return this->_username; }
+		std::string	get_client_hostname() const{ return this->_hostname; }
+		std::string	get_client_servername() const{ return this->_servername; }
+		std::string	get_client_realname() const{ return this->_realname; }
+
+		bool	get_connected_status() const{ return this->_connected; }
+		bool	get_user_status() const{ return this->_user_checked; }
+		bool	get_nick_status() const{ return this->_nick_checked; }
+		bool	get_oper_status() const{ return this->_oper_checked; }
 
 		// Setters //
 
@@ -36,6 +35,10 @@ class Client {
 		void	set_user_status( bool status ){ this->_user_checked = status; }
 		void	set_nick_status( bool status ){ this->_nick_checked = status; }
 		void	set_oper_status( bool status ){ this->_oper_checked = status; }
+
+		// Function //
+
+		static void	send_message( int fd, std::string message ){ send(fd, message.c_str(), message.length(), 0); }
 
 	private :
 
