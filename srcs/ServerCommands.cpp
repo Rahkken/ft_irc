@@ -117,7 +117,7 @@ void	Server::privmsg_command( std::vector<std::string> command_parsed,  Client *
 
 		std::string	message;
 
-		message += ":" + client->get_client_username() + " PRIVMSG " + command_parsed[1] + " :" + command_parsed[2];
+		message += ":" + client->get_client_username() + "@hostname PRIVMSG " + command_parsed[1] + " :" + command_parsed[2];
 		for (unsigned long int i = 3; i < command_parsed.size(); i++)
 			message += " " + command_parsed[i];
 		message += "\n";
@@ -136,7 +136,7 @@ void	Server::privmsg_command( std::vector<std::string> command_parsed,  Client *
 
 			if (channel->check_existing_client(client)) {
 				
-				channel->send_message_to_client(message, client);
+				channel->send_message_to_client(message);
 				Client::send_message(client->get_client_fd(), "Message sent to this channel.\n");
 				std::cout << "Client [" << client->get_client_username() << "] send a message to Channel [" << channel->get_channel_name() << "]." << std::endl;
 			}
@@ -168,7 +168,21 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 			channel.add_operator(client);
 			_channel_register.push_back(channel);
 			std::cout << "Channel [" << channel.get_channel_name() << "] created by Client [" << client->get_client_username() << "]." << std::endl;
-			Client::send_message(client->get_client_fd(), "You created a channel !\n");
+			
+			// Ici --------------
+			std::string message;
+
+			message += ":" + client->get_client_username() + " JOIN #" + channel.get_channel_name() + "\n";
+			channel.send_message_to_client(message);
+
+			message.clear();
+			message += ":IRC 353 " + client->get_client_username() + "  = #" + channel.get_channel_name() + " :@" + client->get_client_username() + "\n";
+			Client::send_message(client->get_client_fd(), message);
+
+			message.clear();
+			message += ":IRC 366 " + client->get_client_username() + "  #" + channel.get_channel_name() + " :END of /NAMES list\n";
+			Client::send_message(client->get_client_fd(), message);
+			// ------------------
 		}
 		else {
 
@@ -193,6 +207,21 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 				channel->add_new_client(client);
 				std::cout << "Client [" << client->get_client_username() << "] entered the Channel [" << channel->get_channel_name() << "]." << std::endl;
 				Client::send_message(client->get_client_fd(), "You entered this channel.\n");
+
+				// Ici ----------------
+				std::string message;
+
+				message += ":" + client->get_client_username() + " JOIN #" + channel->get_channel_name() + "\n";
+				channel->send_message_to_client(message);
+
+				message.clear();
+				message += ":IRC 353 " + client->get_client_username() + "  = #" + channel->get_channel_name() + " :@" + client->get_client_username() + "\n";
+				Client::send_message(client->get_client_fd(), message);
+
+				message.clear();
+				message += ":IRC 366 " + client->get_client_username() + "  #" + channel->get_channel_name() + " :END of /NAMES list\n";
+				Client::send_message(client->get_client_fd(), message);
+				// --------------------
 			}
 			else
 				Client::send_message(client->get_client_fd(), "You are already in this channel.\n");
@@ -255,7 +284,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] added a password to Channel [" + channel->get_channel_name() + "] : <" + command_parsed[3] + ">.\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +k <password>}.\n");
@@ -271,7 +300,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] removed the password from Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -k}.\n");
@@ -287,7 +316,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] set Invite-Only to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +i}.\n");
@@ -303,7 +332,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] removed Invite-Only from Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -i}.\n");
@@ -319,7 +348,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] set Topic rights to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +t}.\n");
@@ -335,7 +364,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] removed Topic rights to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -t}.\n");
@@ -359,7 +388,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 							std::string	message;
 
 							message += "Client [" + client->get_client_username() + "] give you operator rights in Channel [" + channel->get_channel_name() + "].\n";
-							channel->send_message_to_client(message, client);
+							channel->send_message_to_client(message);
 						}
 					}
 					else
@@ -386,7 +415,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 							std::string	message;
 
 							message += "Client [" + client->get_client_username() + "] removed your operator rights in Channel [" + channel->get_channel_name() + "].\n";
-							channel->send_message_to_client(message, client);
+							channel->send_message_to_client(message);
 						}
 					}
 					else
@@ -413,7 +442,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] set a limit to Channel [" + channel->get_channel_name() + "] of " + command_parsed[3] + " users.\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +l <limit>}.\n");
@@ -429,7 +458,7 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						std::string	message;
 
 						message += "Client [" + client->get_client_username() + "] removed limit to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message, client);
+						channel->send_message_to_client(message);
 					}
 					else
 						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -l}.\n");

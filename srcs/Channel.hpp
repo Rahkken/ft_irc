@@ -46,7 +46,8 @@ class Channel {
 		void	add_operator( Client *client ){ this->_operator_register.push_back(*client); }
 		bool	check_existing_client( Client *client );
 		bool	check_operator_status( Client *client );
-		void	send_message_to_client( std::string message, Client *client );
+		void	send_message_to_client( std::string message );
+		std::string	list_of_users( Client *client );
 
 		// Clear Functions //
 

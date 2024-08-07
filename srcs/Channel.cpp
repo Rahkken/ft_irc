@@ -31,13 +31,30 @@ void	Channel::remove_operator_status( Client client ) {
 	}
 }
 
-void	Channel::send_message_to_client( std::string message, Client *client ) {
+void	Channel::send_message_to_client( std::string message ) {
 
 	for (size_t i = 0; i < _client_register.size(); i++) {
 
-		if (_client_register[i].get_client_fd() != client->get_client_fd())
-			Client::send_message(_client_register[i].get_client_fd(), message);
+		Client::send_message(_client_register[i].get_client_fd(), message);
 	}
+}
+
+std::string	Channel::list_of_users( Client *client ) {
+
+	std::string message;
+
+	message += ":IRC 353 " + client->get_client_username() + "  = #" + get_channel_name() + " :";
+	for (unsigned long int i = 0; i < _client_register.size(); i++) {
+
+		for (unsigned long int j = 0; j < _operator_register.size(); j++) {
+
+			if (_client_register[i].get_client_username() == _operator_register[j].get_client_username())
+				message += "@";
+		}
+		message += _client_register[i].get_client_username() + " ";
+	}
+	message += "\n";
+	return message;
 }
 
 // CLEAR FUNCTIONS //
