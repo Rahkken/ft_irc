@@ -9,8 +9,7 @@ void	Server::pass_command( std::vector<std::string> command_parsed, Client *clie
 		if (!strcmp(command_parsed[1].c_str(), get_password().c_str())) {
 
 			client->set_connected_status(true);
-			Client::send_message(client->get_client_fd(), "You are now connected. Welcome to IRC world !\n");
-			Client::send_message(client->get_client_fd(), "Create your account {NICK <nickname> | USER <username> <hostname> <servername> <realname>}.\n");
+			Client::send_message(client->get_client_fd(), "Create your account {NICK <nickname> | USER <username> <mode> <unused> <realname>}.\n");
 			std::cout << green << "Client [" << client->get_client_fd() << "] is now connected." << white << std::endl;
 		}
 		else {
@@ -27,24 +26,39 @@ void	Server::pass_command( std::vector<std::string> command_parsed, Client *clie
 
 void	Server::user_command( std::vector<std::string> command_parsed, Client *client ) {
 
-	if (command_parsed.size() == 5) {
+	if (command_parsed.size() == 5 || command_parsed.size() == 6) {
 
 		if (!client->get_user_status()) {
 
 			if (get_client_by_username(command_parsed[1]))
 				{Client::send_message(client->get_client_fd(), "Username already used. Try another !\n"); return;}
+			if (command_parsed[2] != "0")
+				{Client::send_message(client->get_client_fd(), "Mode must be set to '0'.\n"); return;}
+			if (command_parsed[3] != "*")
+				{Client::send_message(client->get_client_fd(), "Unused parameter must be set to '*'.\n"); return;}
+			std::string	realname;
+			if (command_parsed.size() == 6)
+				realname += command_parsed[4] + ' ' + command_parsed[5];
+			else
+				realname += command_parsed[4];
 			client->set_client_username(command_parsed[1]);
 			client->set_client_hostname(command_parsed[2]);
 			client->set_client_servername(command_parsed[3]);
-			client->set_client_realname(command_parsed[4]);
+			client->set_client_realname(realname);
 			std::cout << "Client [" << client->get_client_fd() << "] :" << std::endl;
 			std::cout << "<username> : " << client->get_client_username() << std::endl;
-			std::cout << "<hostname> : " << client->get_client_hostname() << std::endl;
-			std::cout << "<servname> : " << client->get_client_servername() << std::endl;
+			std::cout << "<mode> : " << client->get_client_hostname() << std::endl;
+			std::cout << "<unused> : " << client->get_client_servername() << std::endl;
 			std::cout << "<realname> : " << client->get_client_realname() << std::endl;
-			std::cout << "Username, hostname, servname and realname setted." << std::endl;
-			Client::send_message(client->get_client_fd(), "Username, hostname, servname and realname setted !\n");
+			std::cout << "USER parameters setted." << std::endl;
+			Client::send_message(client->get_client_fd(), "USER parameters setted.\n");
 			client->set_user_status(true);
+			if (client->get_nick_status()) {
+
+				std::string	message;
+				message += ":IRC 001 " + client->get_client_nickname() + " :You are now connected. Welcome to IRC world ! " + client->get_client_nickname() + "!" + client->get_client_username() + "@localhost\n";
+				Client::send_message(client->get_client_fd(), message);
+			}
 		}
 		else
 			Client::send_message(client->get_client_fd(), "Username settings already done.\n");
@@ -59,6 +73,8 @@ void	Server::nick_command( std::vector<std::string> command_parsed, Client *clie
 
 		if (!client->get_nick_status()) {
 
+			if (command_parsed[1].size() > 9)
+				{Client::send_message(client->get_client_fd(), "Nickname have a maximum length of 9.\n"); return;}
 			if (get_client_by_nickname(command_parsed[1]))
 				{Client::send_message(client->get_client_fd(), "Nickname already used. Try another !\n"); return;}
 			client->set_client_nickname(command_parsed[1]);
@@ -67,6 +83,12 @@ void	Server::nick_command( std::vector<std::string> command_parsed, Client *clie
 			std::cout << "Nickname setted." << std::endl;
 			Client::send_message(client->get_client_fd(), "Nickname setted !\n");
 			client->set_nick_status(true);
+			if (client->get_user_status()) {
+
+				std::string	message;
+				message += ":IRC 001 " + client->get_client_nickname() + " :You are now connected. Welcome to IRC world ! " + client->get_client_nickname() + "!" + client->get_client_username() + "@localhost\n";
+				Client::send_message(client->get_client_fd(), message);
+			}
 		}
 		else
 			Client::send_message(client->get_client_fd(), "Nickname settings already done.\n");
@@ -117,7 +139,7 @@ void	Server::privmsg_command( std::vector<std::string> command_parsed,  Client *
 
 		std::string	message;
 
-		message += ":" + client->get_client_username() + "@hostname PRIVMSG " + command_parsed[1] + " :" + command_parsed[2];
+		message += ":" + client->get_client_username() + "@localhost PRIVMSG " + command_parsed[1] + " :" + command_parsed[2];
 		for (unsigned long int i = 3; i < command_parsed.size(); i++)
 			message += " " + command_parsed[i];
 		message += "\n";
@@ -154,6 +176,11 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 
 	if (command_parsed.size() == 2 || command_parsed.size() == 3) {
 
+		for (size_t i = 0; i < command_parsed[1].size(); i++) {
+
+			if (command_parsed[1][i] == ' ' || command_parsed[1][i] == '\a' || command_parsed[1][i] == ',')
+				{Client::send_message(client->get_client_fd(), "Channel name mustn't have ' ', '\a' or ','.\n"); return;}
+		}
 		if (command_parsed[1][0] != '#')
 			Client::send_message(client->get_client_fd(), "Try with '#' in front the channel name.\n");
 		else if (!check_existing_channel(command_parsed[1].erase(0, 1))) {
@@ -169,18 +196,21 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 			_channel_register.push_back(channel);
 			std::cout << "Channel [" << channel.get_channel_name() << "] created by Client [" << client->get_client_username() << "]." << std::endl;
 			
-			// Ici --------------
 			std::string message;
 
-			message += ":" + client->get_client_username() + " JOIN #" + channel.get_channel_name() + "\n";
+			message += client->get_client_nickname() + '!' + client->get_client_username() + "@localhost JOIN #" + channel.get_channel_name() + "\r\n";
 			channel.send_message_to_client(message);
 
 			message.clear();
-			message += ":IRC 353 " + client->get_client_username() + "  = #" + channel.get_channel_name() + " :@" + client->get_client_username() + "\n";
+			message += ":IRC 332 " + client->get_client_nickname() + " #" + channel.get_channel_name() + " :Welcome\n";
 			Client::send_message(client->get_client_fd(), message);
 
 			message.clear();
-			message += ":IRC 366 " + client->get_client_username() + "  #" + channel.get_channel_name() + " :END of /NAMES list\n";
+			message += ":IRC 353 " + client->get_client_nickname() + " = #" + channel.get_channel_name() + " :@" + client->get_client_username() + "\n";
+			Client::send_message(client->get_client_fd(), message);
+
+			message.clear();
+			message += ":IRC 366 " + client->get_client_nickname() + " #" + channel.get_channel_name() + " :END of /NAMES list\n";
 			Client::send_message(client->get_client_fd(), message);
 			// ------------------
 		}
@@ -211,8 +241,12 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 				// Ici ----------------
 				std::string message;
 
-				message += ":" + client->get_client_username() + " JOIN #" + channel->get_channel_name() + "\n";
+				message += client->get_client_nickname() + '!' + client->get_client_username() + "@localhost JOIN #" + channel->get_channel_name() + "\r\n";
 				channel->send_message_to_client(message);
+
+				message.clear();
+				message += ":IRC 332 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :Welcome\n";
+				Client::send_message(client->get_client_fd(), message);
 
 				message.clear();
 				message += ":IRC 353 " + client->get_client_username() + "  = #" + channel->get_channel_name() + " :@" + client->get_client_username() + "\n";
