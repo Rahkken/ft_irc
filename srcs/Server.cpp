@@ -2,7 +2,7 @@
 
 // GETTERS //
 
-Client	*Server::get_client_by_fd( int fd ) {
+Client	*Server::get_client_by_fd( const int& fd ) {
 
 	for (size_t i = 0; i < this->_client_register.size(); i++) {
 
@@ -12,7 +12,7 @@ Client	*Server::get_client_by_fd( int fd ) {
 	return NULL;
 }
 
-Client	*Server::get_client_by_username( std::string username ) {
+Client	*Server::get_client_by_username( const std::string& username ) {
 
 	for (size_t i = 0; i < this->_client_register.size(); i++) {
 
@@ -22,7 +22,7 @@ Client	*Server::get_client_by_username( std::string username ) {
 	return NULL;
 }
 
-Client	*Server::get_client_by_nickname( std::string nickname ) {
+Client	*Server::get_client_by_nickname( const std::string& nickname ) {
 
 	for (size_t i = 0; i < this->_client_register.size(); i++) {
 
@@ -32,7 +32,7 @@ Client	*Server::get_client_by_nickname( std::string nickname ) {
 	return NULL;
 }
 
-Channel	*Server::get_channel( std::string name ) {
+Channel	*Server::get_channel( const std::string& name ) {
 
 	for (size_t i = 0; i < this->_channel_register.size(); i++) {
 
@@ -194,14 +194,14 @@ void	Server::data_receiver( int fd ) {
 					user_command(command_parsed, client);
 				else if (!strcmp(command_parsed[0].c_str(), "NICK"))
 					nick_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "QUIT"))
+					quit_command(command_parsed, client);
 				else
 					Client::send_message(fd, "Create your account {NICK <nickname> | USER <username> <hostname> <servername> <realname>}.\n");
 			}
 			else {
 
-				if (!strcmp(command_parsed[0].c_str(), "QUIT"))
-					quit_command(command_parsed, client);
-				else if (!strcmp(command_parsed[0].c_str(), "OPER"))
+				if (!strcmp(command_parsed[0].c_str(), "OPER"))
 					oper_command(command_parsed, client);
 				else if (!strcmp(command_parsed[0].c_str(), "PRIVMSG"))
 					privmsg_command(command_parsed, client);
@@ -224,7 +224,7 @@ void	Server::data_receiver( int fd ) {
 
 // CHECK FUNCTIONS //
 
-bool	Server::check_existing_channel( std::string channel_name ) {
+bool	Server::check_existing_channel( const std::string& channel_name ) const{
 
 	for (size_t i = 0; i < _channel_register.size(); i++) {
 
@@ -234,7 +234,7 @@ bool	Server::check_existing_channel( std::string channel_name ) {
 	return false;
 }
 
-bool	Server::check_existing_client_by_username( std::string username ) {
+bool	Server::check_existing_client_by_username( const std::string& username ) const{
 
 	for (size_t i = 0; i < _client_register.size(); i++) {
 
@@ -244,7 +244,7 @@ bool	Server::check_existing_client_by_username( std::string username ) {
 	return false;
 }
 
-bool	Server::check_existing_client_by_nickname( std::string nickname ) {
+bool	Server::check_existing_client_by_nickname( const std::string& nickname ) const{
 
 	for (size_t i = 0; i < _client_register.size(); i++) {
 

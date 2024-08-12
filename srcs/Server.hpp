@@ -22,26 +22,26 @@ class Server {
 		// Getters //
 
 		bool	get_signal() const{ return this->_signal; }
-		int		get_socket_fd() const{ return this->_socket_fd; }
-		int		get_port() const{ return this->_port; }
-		std::string	get_password() const{ return this->_password; }
-		std::string	get_oper_password() const{ return this->_oper_password; }
-		Client		*get_client_by_fd ( int fd );
-		Client		*get_client_by_username ( std::string username );
-		Client		*get_client_by_nickname( std::string nickname );
-		Channel		*get_channel( std::string name );
+		const int&		get_socket_fd() const{ return this->_socket_fd; }
+		const int&		get_port() const{ return this->_port; }
+		const std::string&	get_password() const{ return this->_password; }
+		const std::string&	get_oper_password() const{ return this->_oper_password; }
+		Client		*get_client_by_fd ( const int& fd );
+		Client		*get_client_by_username ( const std::string& username );
+		Client		*get_client_by_nickname( const std::string& nickname );
+		Channel		*get_channel( const std::string& name );
 
 		// Setters //
 
-		void	set_socket_fd( int fd ){ this->_socket_fd = fd; }
-		void	set_port( int port ){ this->_port = port; }
-		void	set_password( std::string password ){ this->_password = password; }
+		void	set_socket_fd( const int& fd ){ this->_socket_fd = fd; }
+		void	set_port( const int& port ){ this->_port = port; }
+		void	set_password( const std::string& password ){ this->_password = password; }
 		void	set_oper_password(){ this->_oper_password = "operator"; }
 
 		// Functions //
 
 		static void	signal_handler( int signum );
-		bool	is_digit( const std::string &str){ return str.find_first_not_of("0123456789") == std::string::npos; }
+		bool	is_digit( const std::string &str ){ return str.find_first_not_of("0123456789") == std::string::npos; }
 
 		void	server_init( int port, std::string password );
 		void	socket_creation();
@@ -50,9 +50,10 @@ class Server {
 
 		// Check Functions //
 
-		bool	check_existing_channel( std::string channel_name );
-		bool	check_existing_client_by_username( std::string username );
-		bool	check_existing_client_by_nickname( std::string nickname );
+		bool	check_existing_channel( const std::string& channel_name ) const;
+		bool	check_existing_client_by_username( const std::string& username ) const;
+		bool	check_existing_client_by_nickname( const std::string& nickname ) const;
+		bool	check_valid_nickname( const std::string &nickname ) const;
 
 		// Clear Functions //
 
