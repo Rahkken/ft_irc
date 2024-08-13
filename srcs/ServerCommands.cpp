@@ -5,7 +5,7 @@
 void	Server::pass_command( std::vector<std::string> command_parsed, Client *client ) {
 
 	if (command_parsed.size() < 2)
-        Client::send_message(client->get_client_fd(), ":IRC 461 " + client->get_client_nickname() + " PASS :Not enough parameters\r\n");
+        Client::send_message(client->get_client_fd(), ":IRC 461 PASS :Not enough parameters\r\n");
 	else if (command_parsed.size() == 2) {
 
 		if (!strcmp(command_parsed[1].c_str(), get_password().c_str())) {
@@ -16,7 +16,7 @@ void	Server::pass_command( std::vector<std::string> command_parsed, Client *clie
 		}
 		else {
 
-			Client::send_message(client->get_client_fd(), "Bad password... Bye-bye !\n");
+			Client::send_message(client->get_client_fd(), ":IRC 464 :Password incorrect\r\n");
 			std::cout << red << "Client [" << client->get_client_fd() << "] entered the wrong password." << white << std::endl;
 			client_clear(client->get_client_fd());
 			close(client->get_client_fd());
@@ -29,13 +29,13 @@ void	Server::pass_command( std::vector<std::string> command_parsed, Client *clie
 void	Server::user_command( std::vector<std::string> command_parsed, Client *client ) {
 
 	if (command_parsed.size() < 5)
-		Client::send_message(client->get_client_fd(), ":IRC 461 " + client->get_client_nickname() + " USER :Not enough parameters\r\n");
+		Client::send_message(client->get_client_fd(), ":IRC 461 USER :Not enough parameters\r\n");
 	else if (command_parsed.size() == 5 || command_parsed.size() == 6) {
 
 		if (!client->get_user_status()) {
 
 			if (get_client_by_username(command_parsed[1]))
-				{Client::send_message(client->get_client_fd(), ":IRC 462 " + client->get_client_nickname() + " :Username already used. Try another!\r\n"); return;}
+				{Client::send_message(client->get_client_fd(), ":IRC 462 :Username already used. Try another!\r\n"); return;}
 			if (command_parsed[2] != "0")
 				{Client::send_message(client->get_client_fd(), "Mode must be set to '0'.\n"); return;}
 			if (command_parsed[3] != "*")
@@ -61,7 +61,7 @@ void	Server::user_command( std::vector<std::string> command_parsed, Client *clie
 				Client::send_message(client->get_client_fd(), ":IRC 001 " + client->get_client_nickname() + " :You are now connected. Welcome to IRC world ! " + client->get_client_nickname() + "!" + client->get_client_username() + "@localhost\r\n");
 		}
 		else
-			Client::send_message(client->get_client_fd(), ":IRC 462 " + client->get_client_nickname() + " :You may not reregister\r\n");
+			Client::send_message(client->get_client_fd(), ":IRC 462 " + client->get_client_username() + " :You may not reregister\r\n");
 	}
 	else
 		Client::send_message(client->get_client_fd(), "Try {USER <username> <hostname> <servername> <realname>}.\n");
@@ -91,7 +91,7 @@ void	Server::nick_command( std::vector<std::string> command_parsed, Client *clie
 				Client::send_message(client->get_client_fd(), ":IRC 001 " + client->get_client_nickname() + " :You are now connected. Welcome to IRC world ! " + client->get_client_nickname() + "!" + client->get_client_username() + "@localhost\r\n");
 		}
 		else
-			Client::send_message(client->get_client_fd(), ":IRC 432 :Nickname settings already done.\r\n");
+			Client::send_message(client->get_client_fd(), ":IRC 462 " + client->get_client_nickname() + " :You may not reregister\r\n");
 	}
 	else
 		Client::send_message(client->get_client_fd(), "Try {NICK <nickname>}.\n");
@@ -127,9 +127,9 @@ void	Server::oper_command( std::vector<std::string> command_parsed, Client *clie
         Client::send_message(client->get_client_fd(), ":IRC 461 " + client->get_client_nickname() + " OPER :Not enough parameters\r\n");
 	else if (command_parsed.size() == 3) {
 
-		if (!check_existing_client_by_username(command_parsed[1]))
-			{Client::send_message(client->get_client_fd(), "This client doesn't exist.\n"); return;}
-		if (!strcmp(client->get_client_username().c_str(), command_parsed[1].c_str())) {
+		if (!check_existing_client_by_nickname(command_parsed[1]))
+			{Client::send_message(client->get_client_fd(), ":IRC 401 " + client->get_client_nickname() + " " +command_parsed[1] + " :No such nickname\r\n"); return;}
+		if (!strcmp(client->get_client_nickname().c_str(), command_parsed[1].c_str())) {
 
 			if (!strcmp(command_parsed[2].c_str(), get_oper_password().c_str())) {
 
@@ -179,7 +179,7 @@ void	Server::privmsg_command( std::vector<std::string> command_parsed,  Client *
 				std::cout << "Client [" << client->get_client_nickname() << "] send a message to Channel [" << channel->get_channel_name() << "]." << std::endl;
 			}
 			else
-				Client::send_message(client->get_client_fd(), ":IRC 404 " + client->get_client_nickname() + " " + command_parsed[1] + " :Cannot send to channel\r\n");
+				Client::send_message(client->get_client_fd(), ":IRC 404 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :Cannot send to channel\r\n");
 		}
 		else
 			Client::send_message(client->get_client_fd(), ":IRC 401 " + client->get_client_nickname() + " " + command_parsed[1] + " :No such nick/channel\r\n");
@@ -213,22 +213,10 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 			channel.add_operator(client);
 			_channel_register.push_back(channel);
 			std::cout << "Channel [" << channel.get_channel_name() << "] created by Client [" << client->get_client_username() << "]." << std::endl;
-			
-			std::string message;
-
-			message += ":" + client->get_client_nickname() + "!" + client->get_client_username() + "@hostname JOIN :#" + channel.get_channel_name() + "\r\n";
-			channel.send_message_to_client(message);
-
-			message.clear();
-			message += ":IRC 332 " + client->get_client_nickname() + " #" + channel.get_channel_name()  + "\r\n";
-			Client::send_message(client->get_client_fd(), message);
-
-
+			channel.send_message_to_client(":" + client->get_client_nickname() + "!" + client->get_client_username() + "@hostname JOIN :#" + channel.get_channel_name() + "\r\n");
+			Client::send_message(client->get_client_fd(), ":IRC 332 " + client->get_client_nickname() + " #" + channel.get_channel_name()  + "\r\n");
 			Client::send_message(client->get_client_fd(), channel.list_of_users(client));
-
-			message.clear();
-			message += ":IRC 366 " + client->get_client_nickname() + " #" + channel.get_channel_name()  + " :END of /NAMES list\r\n";
-			Client::send_message(client->get_client_fd(), message);
+			Client::send_message(client->get_client_fd(), ":IRC 366 " + client->get_client_nickname() + " #" + channel.get_channel_name()  + " :END of /NAMES list\r\n");
 		}
 		else {
 
@@ -237,37 +225,25 @@ void	Server::join_command( std::vector<std::string> command_parsed, Client *clie
 			if (channel->get_key_status()) {
 
 				if (command_parsed.size() != 3)
-					{Client::send_message(client->get_client_fd(), "You have to enter a password {JOIN <channel> <password>}.\n"); return;}
+					{Client::send_message(client->get_client_fd(), ":IRC 475 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :Cannot join channel (+k)\r\n"); return;}
 				else if (strcmp(channel->get_channel_password().c_str(), command_parsed[2].c_str()))
-					{Client::send_message(client->get_client_fd(), ":IRC 475 " + client->get_client_nickname() + " #" + command_parsed[1] + " :Cannot join channel (+k)\r\n"); return;}
+					{Client::send_message(client->get_client_fd(), "Wrong password.\n"); return;}
 			}
 			if (channel->get_invite_status())
-				{Client::send_message(client->get_client_fd(), ":IRC 473 " + client->get_client_nickname() + " #" + command_parsed[1] + " :Cannot join channel (+i)\r\n"); return;}
+				{Client::send_message(client->get_client_fd(), ":IRC 473 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :Cannot join channel (+i)\r\n"); return;}
 			if (channel->get_limit_status()) {
 
 				if (channel->get_user_limit() >= channel->get_channel_size())
-					{Client::send_message(client->get_client_fd(), ":IRC 471 " + client->get_client_nickname() + " #" + command_parsed[1] + " :Cannot join channel (+l)\r\n"); return;}
+					{Client::send_message(client->get_client_fd(), ":IRC 471 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :Cannot join channel (+l)\r\n"); return;}
 			}
 			if (!channel->check_existing_client(client)) {
 
 				channel->add_new_client(client);
 				std::cout << "Client [" << client->get_client_username() << "] entered the Channel [" << channel->get_channel_name() << "]." << std::endl;
-				Client::send_message(client->get_client_fd(), "You entered this channel.\n");
-
-				std::string message;
-
-				message += ":" + client->get_client_nickname() + "!" + client->get_client_username() + "@hostname JOIN :#" + channel->get_channel_name() + "\r\n";
-				channel->send_message_to_client(message);
-
-				message.clear();
-				message += ":IRC 332 " + client->get_client_nickname() + " #" + channel->get_channel_name()  + "\r\n";
-				Client::send_message(client->get_client_fd(), message);
-
+				channel->send_message_to_client(":" + client->get_client_nickname() + "!" + client->get_client_username() + "@hostname JOIN :#" + channel->get_channel_name() + "\r\n");
+				Client::send_message(client->get_client_fd(), ":IRC 332 " + client->get_client_nickname() + " #" + channel->get_channel_name()  + "\r\n");
 				Client::send_message(client->get_client_fd(), channel->list_of_users(client));
-
-				message.clear();
-				message += ":IRC 366 " + client->get_client_nickname() + " #" + channel->get_channel_name()  + " :END of /NAMES list\r\n";
-				Client::send_message(client->get_client_fd(), message);
+				Client::send_message(client->get_client_fd(), ":IRC 366 " + client->get_client_nickname() + " #" + channel->get_channel_name()  + " :END of /NAMES list\r\n");
 			}
 			else
 				Client::send_message(client->get_client_fd(), "You are already in this channel.\n");
@@ -286,12 +262,12 @@ void	Server::part_command( std::vector<std::string> command_parsed, Client *clie
 		if (command_parsed[1][0] != '#')
 			Client::send_message(client->get_client_fd(), "Try with '#' in front the channel name.\n");
 		else if (!check_existing_channel(command_parsed[1].erase(0, 1)))
-			Client::send_message(client->get_client_fd(), ":IRC 403 " + client->get_client_nickname() + " " + command_parsed[1] + " :Not enough parameters\r\n");
+			Client::send_message(client->get_client_fd(), ":IRC 403 " + client->get_client_nickname() + " #" + command_parsed[1] + " :No such channel\r\n");
 		else {
 
 			Channel *channel = get_channel(command_parsed[1]);
 			if (!channel->check_existing_client(client))
-				Client::send_message(client->get_client_fd(), ":IRC 442 " + client->get_client_nickname() + " " + command_parsed[1] + " :You're not on that channel\r\n");
+				Client::send_message(client->get_client_fd(), ":IRC 442 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not on that channel\r\n");
 			else {
 				
 				channel->client_clear(client->get_client_fd());
@@ -306,18 +282,22 @@ void	Server::part_command( std::vector<std::string> command_parsed, Client *clie
 
 void	Server::mode_command( std::vector<std::string> command_parsed, Client *client ) {
 	
-	if (command_parsed.size() >= 3 && command_parsed.size() < 5) {
+	if (command_parsed.size() < 3)
+        Client::send_message(client->get_client_fd(), ":IRC 461 " + client->get_client_nickname() + " MODE :Not enough parameters\r\n");
+	else if (command_parsed.size() >= 3 && command_parsed.size() < 5) {
 		
 		if (command_parsed[1][0] != '#')
 			Client::send_message(client->get_client_fd(), "Try with '#' in front the channel name.\n");
 		else if (!check_existing_channel(command_parsed[1].erase(0, 1)))
-			Client::send_message(client->get_client_fd(), "This channel doesn't exist.\n");
+			Client::send_message(client->get_client_fd(), ":IRC 403 " + client->get_client_nickname() + " #" + command_parsed[1] + " :No such channel\r\n");
 		else {
 
 			Channel *channel= get_channel(command_parsed[1]);
 
+			if (!channel->check_existing_client(client))
+				{Client::send_message(client->get_client_fd(), ":IRC 442 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not on that channel\r\n"); return;}
 			if (!channel->check_operator_status(client))
-				Client::send_message(client->get_client_fd(), "You don't have rights to use MODE command here.\n");
+				{Client::send_message(client->get_client_fd(), ":IRC 482 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not channel operator\r\n"); return;}
 			else {
 
 				if (command_parsed[2] == "+k") {
@@ -327,15 +307,10 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						channel->set_channel_password(command_parsed[3]);
 						channel->set_key_status(true);
 						std::cout << "Client [" << client->get_client_username() << "] set a password to Channel [" << channel->get_channel_name() << "]." << std::endl;
-						Client::send_message(client->get_client_fd(), "Password added successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] added a password to Channel [" + channel->get_channel_name() + "] : <" + command_parsed[3] + ">.\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " + k\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +k <password>}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> +k <password>}.\n");
 				}
 				else if (command_parsed[2] == "-k") {
 
@@ -343,15 +318,10 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 
 						channel->set_key_status(false);
 						std::cout << "Client [" << client->get_client_username() << "] removed the password from Channel [" << channel->get_channel_name() << "]." << std::endl;
-						Client::send_message(client->get_client_fd(), "Password removed successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] removed the password from Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " - k\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -k}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> -k}.\n");
 				}
 				else if (command_parsed[2] == "+i") {
 
@@ -359,15 +329,10 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 
 						channel->set_invite_status(true);
 						std::cout << "Client [" << client->get_client_username() << "] set Invite-Only to Channel [" << channel->get_channel_name() << "]." << std::endl;
-						Client::send_message(client->get_client_fd(), "Invite-Only mode set successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] set Invite-Only to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " + i\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +i}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> +i}.\n");
 				}
 				else if (command_parsed[2] == "-i") {
 
@@ -375,15 +340,10 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 
 						channel->set_invite_status(false);
 						std::cout << "Client [" << client->get_client_username() << "] removed Invite-Only from Channel [" << channel->get_channel_name() << "]." << std::endl;
-						Client::send_message(client->get_client_fd(), "Invite-Only mode removed successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] removed Invite-Only from Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " - i\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -i}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> -i}.\n");
 				}
 				else if (command_parsed[2] == "+t") {
 
@@ -391,15 +351,10 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 
 						channel->set_topic_status(true);
 						std::cout << "Client [" << client->get_client_username() << "] set Topic rights to Channel [" << channel->get_channel_name() << "]." << std::endl;
-						Client::send_message(client->get_client_fd(), "Topic rights set successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] set Topic rights to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " + t\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +t}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> +t}.\n");
 				}
 				else if (command_parsed[2] == "-t") {
 
@@ -407,22 +362,17 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 
 						channel->set_topic_status(false);
 						std::cout << "Client [" << client->get_client_username() << "] removed Topic rights to Channel [" << channel->get_channel_name() << "]." << std::endl;
-						Client::send_message(client->get_client_fd(), "Topic rights removed successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] removed Topic rights to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " - t\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -t}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> -t}.\n");
 				}
 				else if (command_parsed[2] == "+o") {
 
 					if (command_parsed.size() == 4) {
 
 						if (!get_client_by_username(command_parsed[3]))
-							Client::send_message(client->get_client_fd(), "This client doesn't exist.\n");
+							Client::send_message(client->get_client_fd(), ":IRC 401 " + client->get_client_nickname() + " " + command_parsed[1] + " :No such nickname\r\n");
 						else if (!channel->check_existing_client(get_client_by_username(command_parsed[3])))
 							Client::send_message(client->get_client_fd(), "This client isn't in this channel.\n");
 						else if (channel->check_operator_status(get_client_by_username(command_parsed[3])))
@@ -431,23 +381,18 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						
 							channel->add_operator(get_client_by_username(command_parsed[3]));
 							std::cout << "Client [" << client->get_client_username() << "] give operator rights to Client [" << command_parsed[3] << "] in Channel [" << channel->get_channel_name() << "]." << std::endl;
-							Client::send_message(client->get_client_fd(), "Operator rights successfully given.\n");
-
-							std::string	message;
-
-							message += "Client [" + client->get_client_username() + "] give you operator rights in Channel [" + channel->get_channel_name() + "].\n";
-							channel->send_message_to_client(message);
+							channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " + o\r\n");
 						}
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +o <user>}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> +o <user>}.\n");
 				}
 				else if (command_parsed[2] == "-o") {
 
 					if (command_parsed.size() == 4) {
 
 						if (!get_client_by_username(command_parsed[3]))
-							Client::send_message(client->get_client_fd(), "This client doesn't exist.\n");
+							Client::send_message(client->get_client_fd(), ":IRC 401 " + client->get_client_nickname() + " " + command_parsed[1] + " :No such nickname\r\n");
 						else if (!channel->check_existing_client(get_client_by_username(command_parsed[3])))
 							Client::send_message(client->get_client_fd(), "This client isn't in this channel.\n");
 						else if (!channel->check_operator_status(get_client_by_username(command_parsed[3])))
@@ -458,16 +403,11 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 						
 							channel->remove_operator_status(*get_client_by_username(command_parsed[3]));
 							std::cout << "Client [" << client->get_client_username() << "] removed operator rights to Client [" << command_parsed[3] << "] in Channel [" << channel->get_channel_name() << "]." << std::endl;
-							Client::send_message(client->get_client_fd(), "Operator rights successfully removed.\n");
-
-							std::string	message;
-
-							message += "Client [" + client->get_client_username() + "] removed your operator rights in Channel [" + channel->get_channel_name() + "].\n";
-							channel->send_message_to_client(message);
+							channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " - o\r\n");
 						}
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -o <user>}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> -o <user>}.\n");
 				}
 				else if (command_parsed[2] == "+l") {
 
@@ -485,15 +425,10 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 							{Client::send_message(client->get_client_fd(), "Invalid limit.\n"); return ;}
 						channel->set_limit_status(true);
 						std::cout << "Client [" << client->get_client_username() << "] set a limit to Channel [" << channel->get_channel_name() << "] of " << command_parsed[3] << " users." <<std::endl;
-						Client::send_message(client->get_client_fd(), "Limit set successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] set a limit to Channel [" + channel->get_channel_name() + "] of " + command_parsed[3] + " users.\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " + l\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> +l <limit>}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> +l <limit>}.\n");
 				}
 				else if (command_parsed[2] == "-l") {
 
@@ -501,18 +436,13 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 
 						channel->set_limit_status(false);
 						std::cout << "Client [" << client->get_client_username() << "] removed limit to Channel [" << channel->get_channel_name() << "]." << std::endl;
-						Client::send_message(client->get_client_fd(), "Limit removed successfully.\n");
-
-						std::string	message;
-
-						message += "Client [" + client->get_client_username() + "] removed limit to Channel [" + channel->get_channel_name() + "].\n";
-						channel->send_message_to_client(message);
+						channel->send_message_to_client(":IRC 324 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " - l\r\n");
 					}
 					else
-						Client::send_message(client->get_client_fd(), "Bad parameters {MODE <channel> -l}.\n");
+						Client::send_message(client->get_client_fd(), "Try {MODE <channel> -l}.\n");
 				}
 				else
-					Client::send_message(client->get_client_fd(), "You tried to change a non existant mode.\n");
+					Client::send_message(client->get_client_fd(), ":IRC 502 " + client->get_client_nickname() + " :Unknown MODE flag\r\n");
 			}
 		}
 	}
@@ -522,9 +452,11 @@ void	Server::mode_command( std::vector<std::string> command_parsed, Client *clie
 
 void	Server::kick_command( std::vector<std::string> command_parsed, Client *client) {
 
-	if (command_parsed.size() == 4)
+	if (command_parsed.size() < 3)
+        Client::send_message(client->get_client_fd(), ":IRC 461 " + client->get_client_nickname() + " KICK :Not enough parameters\r\n");
+	else if (command_parsed.size() == 4)
 		command_parsed.erase(command_parsed.begin()+1);
-	if (command_parsed.size() == 3) {
+	else if (command_parsed.size() == 3) {
 
 		if (command_parsed[2][0] == ':')
 			command_parsed[2].erase(0, 1);
@@ -541,8 +473,10 @@ void	Server::kick_command( std::vector<std::string> command_parsed, Client *clie
 			Channel *channel = get_channel(command_parsed[1]);
 			Client	*client_kicked = get_client_by_username(command_parsed[2]);
 
+			if (!channel->check_existing_client(client))
+				{Client::send_message(client->get_client_fd(), ":IRC 442 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not on that channel\r\n"); return;}
 			if (!channel->check_operator_status(client))
-				{Client::send_message(client->get_client_fd(), "You don't have rights to do it.\n"); return;}
+				{Client::send_message(client->get_client_fd(), ":IRC 482 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not channel operator\r\n"); return;}
 			if (channel->check_existing_client(client_kicked)) {
 				
 				channel->client_clear(client_kicked->get_client_fd());
@@ -558,19 +492,21 @@ void	Server::kick_command( std::vector<std::string> command_parsed, Client *clie
 		}
 	}
 	else
-		Client::send_message(client->get_client_fd(), "Bad parameters {KICK <channel> <username>}.\n");
+		Client::send_message(client->get_client_fd(), "Try {KICK <channel> <username>}.\n");
 }
 
 void	Server::invite_command( std::vector<std::string> command_parsed, Client *client) {
 
-	if (command_parsed.size() == 3) {
+	if (command_parsed.size() < 3)
+        Client::send_message(client->get_client_fd(), ":IRC 461 " + client->get_client_nickname() + " INVITE :Not enough parameters\r\n");
+	else if (command_parsed.size() == 3) {
 
 		if (command_parsed[2][0] != '#')
 			Client::send_message(client->get_client_fd(), "Try with '#' in front the channel name.\n");
 		else if (!check_existing_channel(command_parsed[2].erase(0, 1)))
-			Client::send_message(client->get_client_fd(), "This channel doesn't exist.\n");
+			Client::send_message(client->get_client_fd(), ":IRC 403 " + client->get_client_nickname() + " #" + command_parsed[1] + " :No such channel\r\n");
 		else if (!check_existing_client_by_nickname(command_parsed[1]))
-			Client::send_message(client->get_client_fd(), "This client doesn't exist.\n");
+			Client::send_message(client->get_client_fd(), ":IRC 401 " + client->get_client_nickname() + " #" + command_parsed[1] + " :No such nickname\r\n");
 		else if (!strcmp(client->get_client_nickname().c_str(), command_parsed[1].c_str()))
 			Client::send_message(client->get_client_fd(), "You can't invite yourself.\n");
 		else {
@@ -578,24 +514,22 @@ void	Server::invite_command( std::vector<std::string> command_parsed, Client *cl
 			Channel *channel = get_channel(command_parsed[2]);
 			Client	*client_invited = get_client_by_nickname(command_parsed[1]);
 
+			if (!channel->check_existing_client(client))
+				{Client::send_message(client->get_client_fd(), ":IRC 442 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not on that channel\r\n"); return;}
 			if (!channel->check_operator_status(client))
-				{Client::send_message(client->get_client_fd(), "You don't have rights to do it.\n"); return;}
+				{Client::send_message(client->get_client_fd(), ":IRC 482 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not channel operator\r\n"); return;}
 			if (!channel->check_existing_client(client_invited)) {
 				
 				channel->add_new_client(client_invited);
-				std::cout << "Client [" << client->get_client_username() << "] invited Client [" << client_invited->get_client_username() << "] in Channel [" << channel->get_channel_name() << "]." << std::endl;
-				
-				std::string message;
-				message += "You are invited in Channel [" + channel->get_channel_name() + "] by Client [" + client->get_client_username() + "].\n";
-				Client::send_message(client_invited->get_client_fd(), message);
-				Client::send_message(client->get_client_fd(), "You invited this user.\n");
+				std::cout << "Client [" << client->get_client_nickname() << "] invited Client [" << client_invited->get_client_nickname() << "] in Channel [" << channel->get_channel_name() << "]." << std::endl;
+				channel->send_message_to_client(":IRC 336 " + client->get_client_nickname() + " " + client_invited->get_client_nickname() + " " + channel->get_channel_name() + "\r\n");
 			}
 			else
-				Client::send_message(client->get_client_fd(), "This client is already in this channel.\n");
+				Client::send_message(client->get_client_fd(), ":IRC 443 " + client->get_client_nickname() + " " + client_invited->get_client_nickname() + " " + channel->get_channel_name() + " :is already on channel\r\n");
 		}
 	}
 	else
-		Client::send_message(client->get_client_fd(), "Bad parameters {INVITE <nickname> <channel>}.\n");
+		Client::send_message(client->get_client_fd(), "Try {INVITE <nickname> <channel>}.\n");
 }
 
 void	Server::topic_command(std::vector<std::string> command_parsed, Client *client) {
