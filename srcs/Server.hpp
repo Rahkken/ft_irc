@@ -27,8 +27,7 @@ class Server {
 		const std::string&	get_password() const{ return this->_password; }
 		const std::string&	get_oper_password() const{ return this->_oper_password; }
 		Client		*get_client_by_fd ( const int& fd );
-		Client		*get_client_by_username ( const std::string& username );
-		Client		*get_client_by_nickname( const std::string& nickname );
+		Client		*get_client( const std::string& nickname );
 		Channel		*get_channel( const std::string& name );
 
 		// Setters //
@@ -51,8 +50,7 @@ class Server {
 		// Check Functions //
 
 		bool	check_existing_channel( const std::string& channel_name ) const;
-		bool	check_existing_client_by_username( const std::string& username ) const;
-		bool	check_existing_client_by_nickname( const std::string& nickname ) const;
+		bool	check_existing_client( const std::string& nickname ) const;
 		bool	check_valid_nickname( const std::string &nickname ) const;
 
 		// Clear Functions //
@@ -65,7 +63,7 @@ class Server {
 		void	pass_command( std::vector<std::string> command_parsed, Client *client );
 		void	user_command( std::vector<std::string> command_parsed, Client *client );
 		void	nick_command( std::vector<std::string> command_parsed, Client *client );
-		void	quit_command( std::vector<std::string> command_parsed, Client *client );
+		void	quit_command( Client *client );
 		void	oper_command( std::vector<std::string> command_parsed, Client *client );
 		void	privmsg_command( std::vector<std::string> command_parsed, Client *client );
 		void	join_command( std::vector<std::string> command_parsed, Client *client );
