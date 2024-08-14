@@ -528,10 +528,10 @@ void	Server::invite_command( std::vector<std::string> command_parsed, Client *cl
 				
 				channel->add_new_client(client_invited);
 				std::cout << "Client [" << client->get_client_nickname() << "] invited Client [" << client_invited->get_client_nickname() << "] in Channel [" << channel->get_channel_name() << "]." << std::endl;
-				channel->send_message_to_client(":IRC 336 " + client->get_client_nickname() + " " + client_invited->get_client_nickname() + " " + channel->get_channel_name() + "\r\n");
+				channel->send_message_to_client(":IRC 336 " + client->get_client_nickname() + " " + client_invited->get_client_nickname() + " #" + channel->get_channel_name() + "\r\n");
 			}
 			else
-				Client::send_message(client->get_client_fd(), ":IRC 443 " + client->get_client_nickname() + " " + client_invited->get_client_nickname() + " " + channel->get_channel_name() + " :is already on channel\r\n");
+				Client::send_message(client->get_client_fd(), ":IRC 443 " + client->get_client_nickname() + " " + client_invited->get_client_nickname() + " #" + channel->get_channel_name() + " :is already on channel\r\n");
 		}
 	}
 	else
@@ -540,6 +540,8 @@ void	Server::invite_command( std::vector<std::string> command_parsed, Client *cl
 
 void	Server::topic_command(std::vector<std::string> command_parsed, Client *client) {
 
+	if (command_parsed.size() < 2)
+			Client::send_message(client->get_client_fd(), ":IRC 461 " + client->get_client_nickname() + " TOPIC :Not enough parameters\r\n");
 	if (command_parsed.size() >= 2) {
 
 		if (command_parsed.size() > 2 && command_parsed[2][0] == ':')
@@ -547,18 +549,18 @@ void	Server::topic_command(std::vector<std::string> command_parsed, Client *clie
 		if (command_parsed[1][0] != '#')
 			{Client::send_message(client->get_client_fd(), "Try with '#' in front the channel name.\n"); return;}
 		else if (!check_existing_channel(command_parsed[1].erase(0, 1)))
-			{Client::send_message(client->get_client_fd(), "This channel doesn't exist.\n"); return;}
+			{Client::send_message(client->get_client_fd(), ":IRC 403 " + client->get_client_nickname() + " #" + command_parsed[1] + " :No such channel\r\n"); return;}
 
 		Channel *channel = get_channel(command_parsed[1]);
 		std::string	message;
 		std::string new_topic;
 
 		if (command_parsed.size() == 2 && channel->get_channel_topic().size() <= 0)
-			Client::send_message(client->get_client_fd(), "This channel doesn't have any topic.\n");
+			Client::send_message(client->get_client_fd(), ":IRC 331 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :No topic is set\r\n");
 		else if (command_parsed.size() == 2) {
 
-			message += "Topic : " + channel->get_channel_topic() + "\n";
-			std::cout << "Client [" << client->get_client_username() << "] asked about "<< command_parsed[1] << "'s topic." << std::endl;
+			message += ":IRC 332 #" + channel->get_channel_name() + " :" + channel->get_channel_topic() + "\r\n";
+			std::cout << "Client [" << client->get_client_nickname() << "] asked about #"<< channel->get_channel_name() << "'s topic." << std::endl;
 			Client::send_message(client->get_client_fd(), message);
 		}
 		else if (command_parsed.size() >= 3 && channel->get_topic_status() && channel->check_operator_status(client)) {
@@ -567,17 +569,15 @@ void	Server::topic_command(std::vector<std::string> command_parsed, Client *clie
 			for (unsigned long int i = 3; i < command_parsed.size(); i++)
 				new_topic += " " + command_parsed[i];
 			channel->set_channel_topic(new_topic);
-			message += "You successfully changed " + command_parsed[1] + "'s topic\n";
-			std::cout << "Client [" << client->get_client_username() << "] changed "<< command_parsed[1] << "'s topic." << std::endl;
+			message += "You successfully changed #" + channel->get_channel_name() + "'s topic\n";
+			std::cout << "Client [" << client->get_client_nickname() << "] changed "<< channel->get_channel_name() << "'s topic." << std::endl;
 			Client::send_message(client->get_client_fd(), message);
 		}
 		else if (!channel->check_operator_status(client))
-			Client::send_message(client->get_client_fd(), "You don't have the rights to change the topic.\n");
+			Client::send_message(client->get_client_fd(), ":IRC 482 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :You're not channel operator\n");
 		else if (!channel->get_topic_status())
-			Client::send_message(client->get_client_fd(), "Topic mode isn't active, try to change that with {MODE <channel> +t}.\n");
-		else
-			Client::send_message(client->get_client_fd(), "Bad parameters {TOPIC <channel> [<topic>]}.\n");
+			Client::send_message(client->get_client_fd(), ":IRC 477 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :Channel doesn't support modes\n");
 	}
 	else
-			Client::send_message(client->get_client_fd(), "Bad parameters {TOPIC <channel> [<topic>]}.\n");
+			Client::send_message(client->get_client_fd(), "Try {TOPIC <channel> [<topic>]}.\n");
 }
