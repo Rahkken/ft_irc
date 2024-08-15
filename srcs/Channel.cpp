@@ -41,15 +41,15 @@ std::string	Channel::list_of_users( Client *client ) {
 
 	std::string message;
 
-	message += ":IRC 353 " + client->get_client_username() + "  = #" + get_channel_name() + " :";
+	message += ":IRC 353 " + client->get_client_nickname() + "  = #" + get_channel_name() + " :";
 	for (unsigned long int i = 0; i < _client_register.size(); i++) {
 
 		for (unsigned long int j = 0; j < _operator_register.size(); j++) {
 
-			if (_client_register[i].get_client_username() == _operator_register[j].get_client_username())
+			if (_client_register[i].get_client_nickname() == _operator_register[j].get_client_nickname())
 				message += "@";
 		}
-		message += _client_register[i].get_client_username() + " ";
+		message += _client_register[i].get_client_nickname() + " ";
 	}
 	message += "\n";
 	return message;

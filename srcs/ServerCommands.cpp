@@ -81,7 +81,7 @@ void	Server::nick_command( std::vector<std::string> command_parsed, Client *clie
 			std::cout << "Client [" << client->get_client_fd() << "] :" << std::endl;
 			std::cout << "<nickname> : " << client->get_client_nickname() << std::endl;
 			std::cout << "Nickname setted." << std::endl;
-			Client::send_message(client->get_client_fd(), "Nickname setted !\n");
+			Client::send_message(client->get_client_fd(), "Nickname setted.\n");
 			client->set_nick_status(true);
 			if (client->get_user_status())
 				Client::send_message(client->get_client_fd(), ":IRC 001 " + client->get_client_nickname() + " :You are now connected. Welcome to IRC world ! " + client->get_client_nickname() + "!" + client->get_client_username() + "@localhost\r\n");
