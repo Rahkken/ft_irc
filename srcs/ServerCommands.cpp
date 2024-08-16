@@ -542,7 +542,7 @@ void	Server::topic_command(std::vector<std::string> command_parsed, Client *clie
 			Client::send_message(client->get_client_fd(), ":IRC 331 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :No topic is set\r\n");
 		else if (command_parsed.size() == 2) {
 
-			message += ":IRC 332 #" + channel->get_channel_name() + " :" + channel->get_channel_topic() + "\r\n";
+			message += ":IRC 332 " + client->get_client_nickname() + " #" + channel->get_channel_name() + " :" + channel->get_channel_topic() + "\r\n";
 			std::cout << "Client [" << client->get_client_nickname() << "] asked about #"<< channel->get_channel_name() << "'s topic." << std::endl;
 			Client::send_message(client->get_client_fd(), message);
 		}
