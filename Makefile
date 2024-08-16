@@ -1,18 +1,28 @@
-CC = c++ -g -Wall -Wextra -Werror -std=c++98
+NAME = ircserv
+CC = c++
+CFLAGS = -Wall -Wextra -Werror -std=c++98
 
 SRCS = ./srcs/main.cpp \
 		./srcs/Server.cpp \
 		./srcs/ServerCommands.cpp \
 		./srcs/Channel.cpp
 
-NAME = ircserv
+OBJS = ${SRCS:.cpp=.o}
 
-${NAME} :
-	${CC} ${SRCS} -o ${NAME}
+all: ${NAME}
 
-all : ${NAME}
+${NAME}: ${OBJS}
+		@${CC} ${CFLAGS} -o ${NAME} ${OBJS}
 
-fclean :
-	rm -rf ${NAME}
+%.o: %.cpp ./srcs/Server.hpp ./srcs/Client.hpp ./srcs/Channel.hpp
+		${CC} ${CFLAGS} -c $< -o $@
 
-re : fclean all
+clean:
+		@rm -f ${OBJS}
+
+fclean: clean
+		@rm -f ${NAME} a.out
+
+re: fclean all
+
+.PHONY: all clean fclean re
