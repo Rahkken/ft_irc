@@ -26,7 +26,7 @@ class Server {
 		const int&		get_port() const{ return this->_port; }
 		const std::string&	get_password() const{ return this->_password; }
 		const std::string&	get_oper_password() const{ return this->_oper_password; }
-		Client		*get_client_by_fd ( const int& fd );
+		Client		*get_client_by_fd( const int& fd );
 		Client		*get_client( const std::string& nickname );
 		Channel		*get_channel( const std::string& name );
 
@@ -42,10 +42,10 @@ class Server {
 		static void	signal_handler( int signum );
 		bool	is_digit( const std::string &str ){ return str.find_first_not_of("0123456789") == std::string::npos; }
 
-		void	server_init( int port, std::string password );
+		void	server_init( const int& port, const std::string& password );
 		void	socket_creation();
 		void	new_client_request();
-		void	data_receiver( int fd );
+		void	data_receiver( const int& fd );
 
 		// Check Functions //
 
@@ -55,7 +55,7 @@ class Server {
 
 		// Clear Functions //
 
-		void	client_clear( int fd );
+		void	client_clear( const int& fd );
 		void	close_socket_fd();
 
 		// Command Functions //

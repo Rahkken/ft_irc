@@ -14,7 +14,7 @@ class Channel {
 
 		// Getters //
 
-		std::string	get_channel_name() const{ return this->_name; }
+		const std::string&	get_channel_name() const{ return this->_name; }
 		size_t		get_channel_size() const{ return this->_client_register.size(); }
 
 		bool	get_key_status() const{ return this->_key_status; }
@@ -22,13 +22,13 @@ class Channel {
 		bool	get_topic_status() const{ return this->_topic_status; }
 		bool	get_limit_status() const{ return this->_limit_status; }
 
-		std::string	get_channel_password() const{ return this->_password; }
-		std::string	get_channel_topic() const{ return this->_topic; }
-		size_t		get_user_limit() const{ return this->_user_limit; }
+		const std::string&	get_channel_password() const{ return this->_password; }
+		const std::string&	get_channel_topic() const{ return this->_topic; }
+		const size_t&		get_user_limit() const{ return this->_user_limit; }
 
 		// Setters //
 
-		void	set_channel_name( std::string name ){ this->_name = name; }
+		void	set_channel_name( const std::string& name ){ this->_name = name; }
 	
 		void	set_key_status( bool status ){ _key_status = status; }
 		void	set_invite_status( bool status ){ _invite_status = status; }
@@ -36,9 +36,9 @@ class Channel {
 		void	set_limit_status( bool status ){ _limit_status = status; }
 		void	remove_operator_status( Client client );
 
-		void	set_channel_password( std::string password ){ _password = password; }
-		void	set_channel_topic( std::string topic ) { _topic = topic; }
-		void	set_user_limit( unsigned long int limit ){ _user_limit = limit; }
+		void	set_channel_password( const std::string& password ){ _password = password; }
+		void	set_channel_topic( const std::string& topic ){ _topic = topic; }
+		void	set_user_limit( const unsigned long int& limit ){ _user_limit = limit; }
 
 		// Functions //
 
@@ -46,12 +46,12 @@ class Channel {
 		void	add_operator( Client *client ){ this->_operator_register.push_back(*client); }
 		bool	check_existing_client( Client *client );
 		bool	check_operator_status( Client *client );
-		void	send_message_to_client( std::string message );
+		void	send_message_to_client( const std::string& message );
 		std::string	list_of_users( Client *client );
 
 		// Clear Functions //
 
-		void	client_clear( int fd );
+		void	client_clear( const int& fd );
 
 	private :
 

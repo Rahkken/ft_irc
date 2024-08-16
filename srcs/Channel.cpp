@@ -31,7 +31,7 @@ void	Channel::remove_operator_status( Client client ) {
 	}
 }
 
-void	Channel::send_message_to_client( std::string message ) {
+void	Channel::send_message_to_client( const std::string& message ) {
 
 	for (size_t i = 0; i < _client_register.size(); i++)
 		Client::send_message(_client_register[i].get_client_fd(), message);
@@ -57,7 +57,7 @@ std::string	Channel::list_of_users( Client *client ) {
 
 // CLEAR FUNCTIONS //
 
-void	Channel::client_clear( int fd ) {
+void	Channel::client_clear( const int& fd ) {
 
 	for (size_t i = 0; i < _client_register.size(); i++) {
 
