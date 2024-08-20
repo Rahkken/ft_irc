@@ -132,99 +132,101 @@ void	Server::new_client_request() {
 
 void	Server::data_receiver( const int& fd ) {
 
-    Client *client = get_client_by_fd(fd);
+	Client *client = get_client_by_fd(fd);
 
-    char buff[1024];
-    memset(buff, 0, sizeof(buff));
+	char buff[1024];
+	memset(buff, 0, sizeof(buff));
 
-    ssize_t bytes = recv(fd, buff, sizeof(buff) - 1, 0);
+	ssize_t bytes = recv(fd, buff, sizeof(buff) - 1, 0);
 
-    if (bytes <= 0) {
+	if (bytes <= 0) {
 
-        if (bytes)
-            std::cout << red << "Client [" << client->get_client_fd() << "] disconnected." << white << std::endl;
-        else
-            std::cerr << "recv() error on client [" << client->get_client_fd() << "]." << std::endl;
-        client_clear(client->get_client_fd());
-        close(client->get_client_fd());
-        return;
-    }
+		if (bytes)
+			std::cout << red << "Client [" << client->get_client_fd() << "] disconnected." << white << std::endl;
+		else
+			std::cerr << "recv() error on client [" << client->get_client_fd() << "]." << std::endl;
+		client_clear(client->get_client_fd());
+		close(client->get_client_fd());
+		return;
+	}
+ 
+	std::string command_buffer = client->get_command_buffer() + std::string(buff, bytes);
+	client->set_command_buffer(command_buffer);
 
-    std::string command_buffer = client->get_command_buffer() + std::string(buff, bytes);
-    client->set_command_buffer(command_buffer);
+	size_t pos;
+	while ((pos = command_buffer.find('\n')) != std::string::npos) {
 
-    size_t pos;
-    while ((pos = command_buffer.find('\n')) != std::string::npos) {
-        std::string command_raw = command_buffer.substr(0, pos);
+		std::string command_raw = command_buffer.substr(0, pos);
+		if (command_raw.empty()) {
 
-        command_buffer.erase(0, pos + 1);
-        client->set_command_buffer(command_buffer);
+			command_buffer.clear();
+			client->set_command_buffer(command_buffer);
+			break;
+		}
 
-        if (!command_raw.empty() && command_raw[command_raw.size() - 1] == '\r') {
-            command_raw.erase(command_raw.size() - 1);
-        }
+		command_buffer.erase(0, pos + 1);
+		client->set_command_buffer(command_buffer);
 
-        std::vector<std::string> command_parsed;
-        size_t prev_pos = 0;
-        size_t curr_pos;
+		if (!command_raw.empty() && command_raw[command_raw.size() - 1] == '\r')
+			command_raw.erase(command_raw.size() - 1);
 
-        while ((curr_pos = command_raw.find(' ', prev_pos)) != std::string::npos) {
-            if (curr_pos > prev_pos) {
-                command_parsed.push_back(command_raw.substr(prev_pos, curr_pos - prev_pos));
-            }
-            prev_pos = curr_pos + 1;
-        }
+		std::vector<std::string> command_parsed;
+		size_t prev_pos = 0;
+		size_t curr_pos;
 
-        if (prev_pos < command_raw.size()) {
-            command_parsed.push_back(command_raw.substr(prev_pos));
-        }
+		while ((curr_pos = command_raw.find(' ', prev_pos)) != std::string::npos) {
 
-        // Processus de gestion des commandes
-        if (!client->get_connected_status()) {
+			if (curr_pos > prev_pos)
+				command_parsed.push_back(command_raw.substr(prev_pos, curr_pos - prev_pos));
+			prev_pos = curr_pos + 1;
+		}
+
+		if (prev_pos < command_raw.size())
+			command_parsed.push_back(command_raw.substr(prev_pos));
+
+		if (!client->get_connected_status()) {
 	
-            if (!strcmp(command_parsed[0].c_str(), "PASS"))
-                pass_command(command_parsed, client);
-            else
-                Client::send_message(fd, "Try {PASS <password>}.\n");
-        }
+			if (!strcmp(command_parsed[0].c_str(), "PASS"))
+				pass_command(command_parsed, client);
+			else
+				Client::send_message(fd, "Try {PASS <password>}.\n");
+		}
 		else {
 
-            if (!client->get_user_status() || !client->get_nick_status()) {
+			if (!client->get_user_status() || !client->get_nick_status()) {
 
-                if (!strcmp(command_parsed[0].c_str(), "USER"))
-                    user_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "NICK"))
-                    nick_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "QUIT"))
-                    quit_command(client);
-                else
-                    Client::send_message(fd, "Create your account {NICK <nickname> | USER <username> <hostname> <servername> <realname>}.\n");
-            }
+				if (!strcmp(command_parsed[0].c_str(), "USER"))
+					user_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "NICK"))
+					nick_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "QUIT"))
+					quit_command(client);
+				else
+					Client::send_message(fd, "Create your account {NICK <nickname> | USER <username> <hostname> <servername> <realname>}.\n");
+			}
 			else {
 
-                if (!strcmp(command_parsed[0].c_str(), "OPER"))
-                    oper_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "PRIVMSG"))
-                    privmsg_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "JOIN"))
-                    join_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "PART"))
-                    part_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "MODE"))
-                    mode_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "KICK"))
-                    kick_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "INVITE"))
-                    invite_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "TOPIC"))
-                    topic_command(command_parsed, client);
-                else if (!strcmp(command_parsed[0].c_str(), "QUIT"))
-                    quit_command(client);
-            }
-        }
-    }
-
-    client->set_command_buffer(command_buffer);
+				if (!strcmp(command_parsed[0].c_str(), "OPER"))
+					oper_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "PRIVMSG"))
+					privmsg_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "JOIN"))
+					join_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "PART"))
+					part_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "MODE"))
+					mode_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "KICK"))
+					kick_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "INVITE"))
+					invite_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "TOPIC"))
+					topic_command(command_parsed, client);
+				else if (!strcmp(command_parsed[0].c_str(), "QUIT"))
+					quit_command(client);
+			}
+		}
+	}
 }
 
 // CHECK FUNCTIONS //
@@ -251,15 +253,15 @@ bool	Server::check_existing_client( const std::string& nickname ) const{
 
 bool	Server::check_valid_nickname( const std::string &nickname ) const{
 
-    if (nickname.empty() || nickname.length() > 9)
-        return false;
+	if (nickname.empty() || nickname.length() > 9)
+		return false;
 
-    for (size_t i = 0; i < nickname.length(); i++) {
+	for (size_t i = 0; i < nickname.length(); i++) {
 
-        if (!isalnum(nickname[i]))
-            return false;
-    }
-    return true;
+		if (!isalnum(nickname[i]))
+			return false;
+	}
+	return true;
 }
 
 // CLEAR FUNCTIONS //
@@ -268,14 +270,21 @@ void	Server::client_clear( const int& fd ) {
 
 	for (size_t i = 0; i < _pollfd_register.size(); i++) {
 
-		if (_pollfd_register[i].fd == fd)
-			{_pollfd_register.erase(_pollfd_register.begin() + i); break;}
+		if (_pollfd_register[i].fd == fd) {
+			
+			_pollfd_register.erase(_pollfd_register.begin() + i);
+			break;
+		}
 	}
 
 	for (size_t i = 0; i < _client_register.size(); i++) {
 
-		if (_client_register[i].get_client_fd() == fd)
-			{_client_register.erase(_client_register.begin() + i); break;}
+		if (_client_register[i].get_client_fd() == fd) {
+			
+			close(_client_register[i].get_client_fd());
+			_client_register.erase(_client_register.begin() + i);
+			break;
+		}
 	}
 
 	for (size_t i = 0; i < _channel_register.size(); i++) {

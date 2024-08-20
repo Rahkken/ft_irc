@@ -8,6 +8,7 @@ class Client {
 		// Getters //
 
 		const int&		get_client_fd() const{ return this->_client_fd; }
+		const std::string&		get_client_ip_addr() const{ return this->_client_ip_addr; }
 
 		const std::string&	get_command_buffer() const{ return _command_buffer; }
 		const std::string&	get_client_nickname() const{ return this->_nickname; }
